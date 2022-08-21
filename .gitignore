@@ -1,0 +1,17 @@
+# 忽略指定文件
+abc.json
+.env
+nohup.out
+*.scope
+package-lock.json
+
+# 忽略指定文件夹
+log/
+log_zip/
+db/
+
+public/cat/resources/
+public/query/emails.json
+attached/
+ssl/
+node_modules/
