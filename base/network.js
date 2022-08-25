@@ -1,9 +1,9 @@
 var main = (() => {
-    if (typeof fetch === "undefined") fetch = require("node-fetch");
+    if (typeof window === "undefined") fetch = require("node-fetch"); //node 自带的fetch还待完善，等LTS
     if (typeof FormData === "undefined") FormData = require("form-data");
     if (typeof URL === "undefined") URL = require("url").URL;
     if (typeof URLSearchParams === "undefined") URLSearchParams = require("url").URLSearchParams;
-    if (typeof logTool !== "undefined") logger = (...args) => logTool.emitter.emit("log", "net", ...args); 
+    if (typeof window === "undefined") logger = (...args) => logTool.emitter.emit("log", "net", ...args);
 
     async function doFetch(queryObj, url) {
         if (!queryObj || !queryObj.request) return queryObj;
@@ -30,11 +30,6 @@ var main = (() => {
             console.log("network error");
             return queryObj;
         } // pending resolve
-        if (typeof logger !== "undefined") {
-            logger(
-                queryObj.request.header.method + "\t" + queryObj.response.net.status + "\t" + url,
-            );
-        }
         let res = headerReceiver(queryObj, fetching); // response header
         let data;
         try {
@@ -44,6 +39,7 @@ var main = (() => {
         // console.log(data);
         res.response.data = data;
         res = redirectionCheck(res);
+        if (logger) logger(header.method + "\t" + queryObj.response.net.status + "\t" + url);
         return res;
     }
     async function redirectionCheck(res) {
@@ -82,13 +78,13 @@ var main = (() => {
             header.headers["origin"] = origin;
         } // 生成所需的 cookieObj
         if (queryObj.request.cookieObj) {
-            // 转化为 cookie 字符串
             let cookie = "";
             for (const [cookieName, detailObj] of Object.entries(queryObj.request.cookieObj)) {
                 cookie += cookieName + "=" + detailObj.value + "; ";
-            }
+            } // 转化为 cookie 字符串， append
             cookie = cookie.replace(/; $/, "");
-            header.headers.cookie = cookie;
+            if (!header.headers.cookie) header.headers.cookie = "";
+            header.headers.cookie += cookie;
         }
         if (queryObj.request.header.method === "GET") return queryObj;
         if (/json/i.test(queryObj.request.header["Content-Type"])) {
@@ -223,22 +219,23 @@ var main = (() => {
         // 请求完毕后，暂存得到的cookies
         const allCookieObj = res.response.allCookieObj || {}; // 读取现有 cookie or 重置
         const resCookie = res.response.headers["set-cookie"].split("\n");
-        if (!Array.isArray(resCookie)) return res;
         const resDomain = new URL(res.response.net.url).host;
         const cookieObj = {};
         resCookie.forEach((cookieString) => {
             const cookieInfo = cookieString.split(";");
             // extract cookie name, value, and extra data
             const cookieBody = cookieInfo[0].split("=");
-            const cookieName = cookieBody[0];
-            const value = cookieBody[1];
-            cookieObj[cookieName] = {};
-            cookieObj[cookieName].value = value;
+            let [cookieName, ...valueArr] = cookieBody;
+            let name = cookieName.trim();
+            let value = valueArr.join("="); // 需要考虑值包含多个等号的情况
+            cookieObj[name] = {};
+            cookieObj[name].value = value;
             for (let i = 1; i < cookieInfo.length; i++) {
                 const cookieBody = cookieInfo[i].split("=");
-                const k = cookieBody[0].trim();
-                const v = cookieBody[1];
-                cookieObj[cookieName][k] = v;
+                let [name, ...valueArr] = cookieBody;
+                name = name.trim();
+                let value = valueArr.join("=");
+                cookieObj[cookieName][name] = value;
             }
             // extract domain & sub-domain & path
             let domain = cookieInfo.find((str) => !!str.match(/Domain=/gi));

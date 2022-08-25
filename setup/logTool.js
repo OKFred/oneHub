@@ -4,7 +4,7 @@ let EventEmitter = require("events");
 let _config = {
     logDir: "./log/",
     logArchiveDir: "./archive/log/",
-    logZipName: () => {
+    logArchiveName: () => {
         let yesterday = new Date().valueOf() - oneDay;
         let zipMonth = new Date(yesterday).Format("yyyy-MM"); //压缩上个月的日志
         return `./archive/${zipMonth}.zip`;
@@ -34,6 +34,22 @@ let main = (() => {
         });
         return args[args.length - 1];
     }
+    (function init() {
+        if (!fs.existsSync(_config.logDir)) {
+            try {
+                fs.mkdirSync(_config.logDir);
+            } catch (error) {
+                return console.log("log folder error--日志文件夹未创建");
+            }
+        }
+        if (!fs.existsSync(_config.logArchiveDir)) {
+            try {
+                fs.mkdirSync(_config.logArchiveDir);
+            } catch (error) {
+                return console.log("log archive folder error--日志备份文件夹未创建");
+            }
+        }
+    })();
     (function loggerGC() {
         let oneDay = 1000 * 60 * 60 * 24;
         clearTimeout(_config.GCTimer);
@@ -53,7 +69,7 @@ let main = (() => {
             console.log("logTool--明天再检查 是否需要打包日志");
             return;
         } // 每天检查一次是否为新月份
-        zip(_config.logZipName(), [_config.logArchiveDir]); //历史日志打包
+        zip(_config.logArchiveName(), [_config.logArchiveDir]); //历史日志打包
         fs.readdir(_config.logArchiveDir, (err, files) => {
             if (err) return console.log("无法遍历该目录" + err);
             files.forEach((file) => {

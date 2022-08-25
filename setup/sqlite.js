@@ -8,11 +8,12 @@ let fs = require("fs");
 //配置项
 let _config = {
     DBFile: "./db/github.db",
-    DBZipName: () => {
+    DBArchiveName: () => {
         let today = new Date().Format("yyyyMMdd");
         return `./archive/db/github_backup_${today}.zip`;
     },
-    DBZipDir: "./archive/db/",
+    DBDir: "./db/",
+    DBArchiveDir: "./archive/db/",
     sqlObj: {
         github: [
             {
@@ -71,6 +72,20 @@ let main = (() => {
     setInterval(backupDBClear, oneDay); //每天GC
 
     function init() {
+        if (!fs.existsSync(_config.DBDir)) {
+            try {
+                fs.mkdirSync(_confi.DBDir);
+            } catch (error) {
+                return console.log("DB folder error--数据库文件夹未创建");
+            }
+        }
+        if (!fs.existsSync(_config.DBArchiveDir)) {
+            try {
+                fs.mkdirSync(_config.DBArchiveDir);
+            } catch (error) {
+                return console.log("DB archive folder error--数据库备份文件夹未创建");
+            }
+        }
         if (!fs.existsSync(_config.DBFile)) {
             fs.writeFileSync(_config.DBFile, "", { flag: "a" });
             console.log("database created -- 数据库已生成");
@@ -95,7 +110,7 @@ let main = (() => {
 
     function backupDB() {
         console.log("time to backup -- 该备份数据库了");
-        zip(_config.DBZipName(), [_config.DBFile]);
+        zip(_config.DBArchiveName(), [_config.DBFile]);
     }
 
     function backupDBClear() {
@@ -109,10 +124,10 @@ let main = (() => {
             console.log("明天再检查 是否需要清理");
             return; // 每天检查一次是否为新月份
         }
-        fs.readdir(_config.DBZipDir, (err, files) => {
+        fs.readdir(_config.DBArchiveDir, (err, files) => {
             if (err) return console.log("无法遍历该目录" + err);
             files.forEach((file) => {
-                fs.unlink(_config.DBZipDir + file, function (err) {
+                fs.unlink(_config.DBArchiveDir + file, function (err) {
                     if (err) return console.log(err);
                     console.log(file + ">>文件已删除");
                 });
