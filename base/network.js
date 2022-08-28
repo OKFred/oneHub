@@ -8,10 +8,6 @@ var main = (() => {
     async function doFetch(queryObj, url) {
         if (!queryObj || !queryObj.request) return queryObj;
         if (!url) url = queryObj.request.url;
-        if (url === undefined) {
-            queryObj.response.data = "url undefined";
-            return queryObj;
-        }
         if (
             queryObj.request.header.method === "GET" &&
             !/\?/.test(url) &&
@@ -22,7 +18,7 @@ var main = (() => {
         }
         queryObj.request.url = url;
         queryObj = await headerMaker(queryObj); // request header
-        const header = queryObj.request.header;
+        let header = queryObj.request.header;
         let fetching;
         try {
             fetching = await fetch(url, header);
@@ -39,14 +35,14 @@ var main = (() => {
         // console.log(data);
         res.response.data = data;
         res = redirectionCheck(res);
-        if (logger) logger(header.method + "\t" + queryObj.response.net.status + "\t" + url);
+        if (logger) logger(header.method + "\t" + res.response.net.status + "\t" + url);
         return res;
-    }
-    async function redirectionCheck(res) {
+  }
+  function redirectionCheck(res) {
         // 需求：拿到重定向URL 或 置空
         let redirectSetting = res.request.header.redirect;
         let redirectURL;
-        const { net } = res.response;
+        let { net } = res.response;
         if (!redirectSetting) redirectSetting = "follow";
         if (redirectSetting === "follow") {
             if (net.redirected) redirectURL = net.url;
@@ -68,54 +64,46 @@ var main = (() => {
     }
 
     async function headerMaker(queryObj) {
-        const header = queryObj.request.header;
+        let header = queryObj.request.header;
         if (!header.headers) header.headers = {};
         if (!header.credentials || header.credentials !== "omit") {
-            const allCookieObj = queryObj.response.allCookieObj;
+            let allCookieObj = queryObj.response.allCookieObj;
             if (allCookieObj) queryObj = cookieGetter(queryObj); // node-fetch
-            const origin = new URL(queryObj.request.url).origin;
+            let origin = new URL(queryObj.request.url).origin;
             header.headers["Referer"] = origin;
             header.headers["origin"] = origin;
         } // 生成所需的 cookieObj
         if (queryObj.request.cookieObj) {
             let cookie = "";
-            for (const [cookieName, detailObj] of Object.entries(queryObj.request.cookieObj)) {
+            for (let [cookieName, detailObj] of Object.entries(queryObj.request.cookieObj)) {
                 cookie += cookieName + "=" + detailObj.value + "; ";
             } // 转化为 cookie 字符串， append
             cookie = cookie.replace(/; $/, "");
             if (!header.headers.cookie) header.headers.cookie = "";
             header.headers.cookie += cookie;
         }
-        if (queryObj.request.header.method === "GET") return queryObj;
-        if (/json/i.test(queryObj.request.header["Content-Type"])) {
+        if (header.method === "GET") return queryObj;
+        if (/json/i.test(header["Content-Type"])) {
             header.headers["Content-Type"] = "application/json";
             header.body = JSON.stringify(queryObj.request.data);
-        } else if (/urlencoded/i.test(queryObj.request.header["Content-Type"])) {
+        } else if (/urlencoded/i.test(header["Content-Type"])) {
             header.headers["Content-Type"] = "application/x-www-form-urlencoded";
-            const arr = [];
-            for (const [k, v] of Object.entries(queryObj.request.data)) {
-                if (typeof v === "object") {
-                    arr.push(encodeURIComponent(k) + "=" + encodeURIComponent(JSON.stringify(v)));
-                } else {
-                    arr.push(encodeURIComponent(k) + "=" + encodeURIComponent(v));
-                }
-            }
-            header.body = arr.join("&");
-        } else if (/form(-)?data/gi.test(queryObj.request.header["Content-Type"])) {
-            queryObj.request.header["Content-Type"] = "multipart/form-data";
+            header.body = objToParam(queryObj.request.data);
+        } else if (/form(-)?data/gi.test(header["Content-Type"])) {
+            header["Content-Type"] = "multipart/form-data";
             let bodyData;
             if (queryObj.request.data instanceof FormData) {
                 bodyData = queryObj.request.data;
             } else {
                 bodyData = new FormData();
-                for (const [k, v] of Object.entries(queryObj.request.data)) {
+                for (let [k, v] of Object.entries(queryObj.request.data)) {
                     if (typeof v !== "object" || v instanceof Blob) {
                         bodyData.set(k, v);
                     } else if (v == "$$blob") {
                         // extension 前后端传递，blob→formData:
-                        const file = queryObj.request.file;
-                        const data = await fetch(file.url);
-                        const blobData = await data.blob();
+                        let file = queryObj.request.file;
+                        let data = await fetch(file.url);
+                        let blobData = await data.blob();
                         queryObj.request.file.size = blobData.size;
                         bodyData.set(k, blobData, file.name);
                     } else {
@@ -130,8 +118,8 @@ var main = (() => {
 
     function headerReceiver(res, fetching) {
         let headerObj = {};
-        const { redirected, status, statusText, ok } = fetching;
-        const origin = new URL(fetching.url).origin;
+        let { redirected, status, statusText, ok } = fetching;
+        let origin = new URL(fetching.url).origin;
         res.response.net = {
             redirected,
             status,
@@ -143,11 +131,11 @@ var main = (() => {
         if (fetching.headers.raw) {
             // 兼容node-fetch
             headerObj = fetching.headers.raw();
-            for (const [k, v] of Object.entries(headerObj)) {
+            for (let [k, v] of Object.entries(headerObj)) {
                 headerObj[k] = v.join("\n");
             }
         } else {
-            for (const [k, v] of fetching.headers.entries()) {
+            for (let [k, v] of fetching.headers.entries()) {
                 headerObj[k] = v;
             }
         }
@@ -157,8 +145,8 @@ var main = (() => {
     }
 
     function objToParam(obj) {
-        const arr = [];
-        for (const [k, v] of Object.entries(obj)) {
+        let arr = [];
+        for (let [k, v] of Object.entries(obj)) {
             if (typeof v === "object") {
                 arr.push(encodeURIComponent(k) + "=" + encodeURIComponent(JSON.stringify(v)));
             } else {
@@ -169,9 +157,9 @@ var main = (() => {
     }
 
     function paramToObj(url) {
-        const params = new URL(url).searchParams;
-        const obj = {};
-        for (const [k, v] of params.entries()) {
+        let params = new URL(url).searchParams;
+        let obj = {};
+        for (let [k, v] of params.entries()) {
             obj[k] = v;
         }
         return obj;
@@ -180,15 +168,15 @@ var main = (() => {
     // for node-fetch especially
     function cookieGetter(queryObj) {
         // 读取所需的cookies，准备新的请求
-        const allCookieObj = queryObj.response.allCookieObj;
-        const cookieObj = queryObj.request.cookieObj ? queryObj.request.cookieObj : {};
+        let allCookieObj = queryObj.response.allCookieObj;
+        let cookieObj = queryObj.request.cookieObj ? queryObj.request.cookieObj : {};
         let found = false;
-        const reqDomain = new URL(queryObj.request.url).host;
-        const reqPath = new URL(queryObj.request.url).pathname;
-        const { domainMain, domainSub } = domainChecker(reqDomain);
+        let reqDomain = new URL(queryObj.request.url).host;
+        let reqPath = new URL(queryObj.request.url).pathname;
+        let { domainMain, domainSub } = domainChecker(reqDomain);
         if (allCookieObj[domainMain] === undefined) return queryObj;
         if (allCookieObj[domainMain][domainSub] === undefined) return queryObj;
-        for (const [path, target] of Object.entries(allCookieObj[domainMain][domainSub])) {
+        for (let [path, target] of Object.entries(allCookieObj[domainMain][domainSub])) {
             if (reqPath.match(path)) {
                 found = true;
                 Object.assign(cookieObj, target);
@@ -206,32 +194,32 @@ var main = (() => {
 
     function domainChecker(domain) {
         // 判断域名归属
-        const domainInfo = domain.split(".");
-        const domainMain =
+        let domainInfo = domain.split(".");
+        let domainMain =
             domainInfo[domainInfo.length - 2] + "." + domainInfo[domainInfo.length - 1];
         domainInfo.pop();
         domainInfo.pop();
-        const domainSub = domainInfo.join(".") || "www";
+        let domainSub = domainInfo.join(".") || "www";
         return { domainMain, domainSub };
     }
 
     function cookieSetter(res) {
         // 请求完毕后，暂存得到的cookies
-        const allCookieObj = res.response.allCookieObj || {}; // 读取现有 cookie or 重置
-        const resCookie = res.response.headers["set-cookie"].split("\n");
-        const resDomain = new URL(res.response.net.url).host;
-        const cookieObj = {};
+        let allCookieObj = res.response.allCookieObj || {}; // 读取现有 cookie or 重置
+        let resCookie = res.response.headers["set-cookie"].split("\n");
+        let resDomain = new URL(res.response.net.url).host;
+        let cookieObj = {};
         resCookie.forEach((cookieString) => {
-            const cookieInfo = cookieString.split(";");
+            let cookieInfo = cookieString.split(";");
             // extract cookie name, value, and extra data
-            const cookieBody = cookieInfo[0].split("=");
+            let cookieBody = cookieInfo[0].split("=");
             let [cookieName, ...valueArr] = cookieBody;
             let name = cookieName.trim();
             let value = valueArr.join("="); // 需要考虑值包含多个等号的情况
             cookieObj[name] = {};
             cookieObj[name].value = value;
             for (let i = 1; i < cookieInfo.length; i++) {
-                const cookieBody = cookieInfo[i].split("=");
+                let cookieBody = cookieInfo[i].split("=");
                 let [name, ...valueArr] = cookieBody;
                 name = name.trim();
                 let value = valueArr.join("=");
@@ -240,7 +228,7 @@ var main = (() => {
             // extract domain & sub-domain & path
             let domain = cookieInfo.find((str) => !!str.match(/Domain=/gi));
             domain = domain ? domain.replace(/Domain=(\.)?/gi, "").trim() : resDomain;
-            const { domainMain, domainSub } = domainChecker(domain);
+            let { domainMain, domainSub } = domainChecker(domain);
             let path = cookieInfo.find((str) => !!str.match(/Path=/gi));
             path = path
                 ? path.replace(/.*Path=(.*)/gi, (match, p1) => {

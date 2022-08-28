@@ -13,6 +13,7 @@ async function handleGithubData() {
     return;
 }
 
-let oneDay = 24 * 60 * 60 * 1000;
-setInterval(handleGithubData, oneDay); //每天查一次
+handleGithubData();
+let halfDay = 12 * 60 * 60 * 1000;
+setInterval(handleGithubData, halfDay); //每半天查一次（以免疏漏）
 if (typeof exports !== "undefined") exports.main = { handleGithubData };
