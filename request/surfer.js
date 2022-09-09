@@ -13,7 +13,7 @@ async function handleGithubData() {
     return;
 }
 
-handleGithubData();
+setTimeout(handleGithubData, 0);
 let halfDay = 12 * 60 * 60 * 1000;
 setInterval(handleGithubData, halfDay); //每半天查一次（以免疏漏）
 if (typeof exports !== "undefined") exports.main = { handleGithubData };
