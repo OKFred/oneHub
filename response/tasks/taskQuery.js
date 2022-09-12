@@ -3,7 +3,7 @@
 var main = (() => {
     async function rpcQuery(req, res) {
         let { user } = req.headers;
-        if (user !== global.envGetter("userName")) return res.status(400).send("未授权");
+        if (user !== global.envGetter("adminName")) return res.status(400).send("未授权");
         let { status, result } = validation(req.body, "rpcQuery");
         if (!status) return res.status(400).send("无效传参"); //验证失败
         let { data } = result;
@@ -19,7 +19,7 @@ var main = (() => {
             let { id, login, html_url, avatar_url, followers, following } = queryMsg.response.data;
             let queryTime = new Date().valueOf();
             let date = new Date(queryTime).Format("yyyy-MM-dd");
-            let newId = id + "-" + date;
+            let newId = id + "_" + date;
             let args = [newId, login, html_url, avatar_url, followers, following, queryTime];
             saveGithub(args);
         }

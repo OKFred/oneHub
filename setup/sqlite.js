@@ -4,6 +4,10 @@ console.log("loading database--数据库准备");
 //外部模块
 let EventEmitter = require("events");
 let fs = require("fs");
+let logger =
+    typeof logTool !== "undefined"
+        ? (...args) => logTool.emitter.emit("log", "sql", ...args)
+        : console.log;
 
 //配置项
 let _config = {
@@ -147,7 +151,7 @@ let main = (() => {
         if (index === undefined) index = 0;
         let actionObj = actionArr[index];
         let { name, type, query, args, exit } = actionObj;
-        if (!exit) console.log(type + "\t" + name);
+        if (!exit) logger(type + "\t" + name);
         args ? args.unshift(query) : (args = [query]);
         if (data !== undefined || exit) {
             fn({ status: true, result: data });

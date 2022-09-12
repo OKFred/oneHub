@@ -1,9 +1,9 @@
 var main = (() => {
-    if (typeof window === "undefined") fetch = require("node-fetch"); //node 自带的fetch还待完善，等LTS
+    if (typeof window === 'undefined') fetch = require('node-fetch'); //node 自带的fetch还待完善，等LTS
     if (typeof FormData === "undefined") FormData = require("form-data");
     if (typeof URL === "undefined") URL = require("url").URL;
     if (typeof URLSearchParams === "undefined") URLSearchParams = require("url").URLSearchParams;
-    if (typeof window === "undefined") logger = (...args) => logTool.emitter.emit("log", "net", ...args);
+	  let logger = typeof logTool !== "undefined" ? (...args) => logTool.emitter.emit("log", "net", ...args) : '';
 
     async function doFetch(queryObj, url) {
         if (!queryObj || !queryObj.request) return queryObj;
@@ -69,9 +69,6 @@ var main = (() => {
         if (!header.credentials || header.credentials !== "omit") {
             let allCookieObj = queryObj.response.allCookieObj;
             if (allCookieObj) queryObj = cookieGetter(queryObj); // node-fetch
-            let origin = new URL(queryObj.request.url).origin;
-            header.headers["Referer"] = origin;
-            header.headers["origin"] = origin;
         } // 生成所需的 cookieObj
         if (queryObj.request.cookieObj) {
             let cookie = "";
