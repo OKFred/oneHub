@@ -3,6 +3,7 @@ console.log(`how are you? Now is ${new Date().toLocaleString()}\nTime to Go Glob
 /* 声明一些全局变量 */
 
 //外部模块
+let os = require("os");
 let dotenv = require("dotenv"); //环境变量
 
 //私有模块
@@ -56,3 +57,47 @@ global.prepareMsg = function prepareMsg(What) {
         info: { type: "background", for: "后台任务" },
     };
 };
+
+//服务器状态
+global.serverStatus = Object.assign(
+    {},
+    (() => {
+        let freemem = (os.freemem() / 1024 / 1024 / 1024).toFixed(2);
+        let totalmem = (os.totalmem() / 1024 / 1024 / 1024).toFixed(2);
+        let cpu = os.cpus()[0].model + "*" + os.cpus().length;
+        let hostname = os.hostname();
+        let uptime = (os.uptime() / 3600).toFixed(2);
+        let queryTime = new Date().valueOf();
+        let nets = os.networkInterfaces();
+        let ipArr = [];
+        for (let netArr of Object.values(nets)) {
+            // Skip over non-IPv4 and internal (i.e. 127.0.0.1) addresses
+            // 'IPv4' is in Node <= 17, from 18 it's a number 4 or 6
+            for (let netObj of netArr) {
+                let { family, internal, address } = netObj;
+                let familyV4Value = typeof family === "string" ? "IPv4" : 4;
+                if (family === familyV4Value && !internal) {
+                    ipArr.push(address);
+                    break;
+                }
+            }
+        }
+        console.log(
+           "主机名： " + hostname,
+            "ip： " + ipArr[0],
+            "cpu： " + cpu,
+            "内存合计： " + totalmem + "GB, 当前可用 " + freemem,
+            "待机时长： " + uptime + " Hours",
+            "启动时间： " + new Date(queryTime).toLocaleString(),
+        );
+        return {
+            hostname,
+            ip: ipArr[0],
+            cpu,
+            freemem,
+            totalmem,
+            uptime
+        };
+    })(),
+);
+setTimeout(() => console.log("EOF", "-".repeat(66)), 6666);

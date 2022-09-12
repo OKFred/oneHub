@@ -34,4 +34,10 @@ app.post("/query/rpc", taskQuery.rpcQuery);
 
 const PORT = global.envGetter("PORT") || 80;
 const httpServer = http.createServer(app);
-httpServer.listen(PORT, () => console.log(`http server is on -- 服务已启用，PORT: ${PORT}`));
+httpServer.listen(PORT, () =>
+    console.log(
+        `http service enabled -- 服务已启用: http://${
+            global.serverStatus ? global.serverStatus.ip : ""
+        }:${PORT}`,
+    ),
+);
